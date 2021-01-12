@@ -130,11 +130,16 @@ function pinpost_commit()
 	$mybb->input['action'] = $mybb->get_input('action');
 	if ($mybb->input['action'] == "pin" || $mybb->input['action'] == "unpin") {
 		$fid = $mybb->get_input('fid', MyBB::INPUT_INT);
+		$tid = $mybb->get_input('tid', MyBB::INPUT_INT);
+
+		if ($mybb->input['action'] == "pin" && $mybb->settings['pinpost_limit'] <= $db->fetch_field($db->simple_select("posts", "COUNT(pinned) AS pin", "pinned='1' AND tid='" . $tid . "'"), "pin")) {
+			error_no_permission();
+		}
+
 		$allowed_forums = explode(',', $mybb->settings['pinpost_forums']);
 
 		if ((in_array($fid, $allowed_forums) || in_array('-1', $allowed_forums)) && pinpost_access()) {
 			$lang->load('pinpost');
-			$tid = $mybb->get_input('tid', MyBB::INPUT_INT);
 			$pid = $mybb->get_input('pid', MyBB::INPUT_INT);
 			$state = $mybb->input['action'] == 'pin' ? '1' : '0';
 			$db->update_query("posts", ['pinned' => $state], "pid='{$pid}' AND tid='{$tid}'");
@@ -155,7 +160,7 @@ function pinpost_populate(&$post)
 		global $db, $templates, $lang, $thread;
 		$lang->load('pinpost');
 
-		//Preserve pin count
+		//Preserve pin count to use for every post build
 		if (!isset($thread['pinned'])) {
 			$thread['pinned'] = $db->fetch_field($db->simple_select("posts", "COUNT(pinned) AS pin", "pinned='1' AND tid='" . $post['tid'] . "'"), "pin");
 		}
@@ -186,7 +191,7 @@ function pinpost_populate(&$post)
 				$lang->postbit_pintext = '✖';
 				$pinpost_stamp = my_date('relative', $pinned['dateline']);
 				$pintitle = $lang->sprintf($lang->postbit_pintitle, $lang->pinpost_unpin);
-				if(pinpost_access()) eval("\$pinpost_unpin = \"" . $templates->get("postbit_pinpost_button") . "\";");
+				if (pinpost_access()) eval("\$pinpost_unpin = \"" . $templates->get("postbit_pinpost_button") . "\";");
 				eval("\$pinpost_bits .= \"" . $templates->get("postbit_pinpost_bit") . "\";");
 			}
 
