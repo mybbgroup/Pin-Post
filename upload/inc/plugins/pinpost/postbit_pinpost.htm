@@ -1,0 +1,49 @@
+<a name="pin{$post['tid']}" id="pin{$post['tid']}"></a>
+<div id="pinpost">
+	<div id="pinpost_head">{$lang->pinpost_blocktitle}</div>
+	{$pinpost_bits}
+</div>
+
+<style type="text/css">
+	#pinpost {
+		padding: 10px;
+		border-bottom: 1px solid #CCC;
+	}
+	#pinpost #pinpost_head {
+		padding: 8px 10px;
+		background: rgb(255,225,173);
+		background: -moz-linear-gradient(0deg, rgba(255,225,173,1) 0%, rgba(254,255,201,1) 100%);
+		background: -webkit-linear-gradient(0deg, rgba(255,225,173,1) 0%, rgba(254,255,201,1) 100%);
+		background: linear-gradient(0deg, rgba(255,225,173,1) 0%, rgba(254,255,201,1) 100%);
+		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#ffe1ad",endColorstr="#feffc9",GradientType=1);
+		border: 1px solid #FED185;
+		border-radius: 5px 5px 0 0;
+		font-weight: 700;
+	}
+	#pinpost .pinpost_bit {
+		padding: 8px 10px;
+		border: 1px solid #FED185;
+		border-top: none;
+	}
+	#pinpost .pinpost_bit:nth-child(odd) {
+		background: #FFFBED;
+	}
+	#pinpost .pinpost_bit:nth-child(even) {
+		background: #FFFFEF;
+	}
+	#pinpost .pinpost_bit:last-child {
+		border-radius: 0 0 5px 5px;
+	}
+	#pinpost .pinpost_action {
+		float: right;
+	}
+	#pinpost .pinpost_action a:hover{
+		text-decoration: none;
+	}
+	.postbit_buttons a.postbit_pin span {
+		background-image: url(images/pin.png);
+	}
+	.postbit_buttons a.postbit_unpin span {
+		background-image: url(images/unpin.png);
+	}
+</style>
