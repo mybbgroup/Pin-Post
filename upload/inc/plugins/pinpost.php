@@ -38,6 +38,34 @@ function pinpost_install()
 	global $db, $lang;
 	$lang->load('pinpost');
 
+	$stylesheet = @file_get_contents(MYBB_ROOT . 'inc/plugins/pinpost/pinpost.css');
+	$attachedto = 'showthread.php';
+	$name = 'pinpost.css';
+	$css = array(
+		'name' => $name,
+		'tid' => 1,
+		'attachedto' => $db->escape_string($attachedto),
+		'stylesheet' => $db->escape_string($stylesheet),
+		'cachefile' => $name,
+		'lastmodified' => TIME_NOW,
+	);
+	$db->update_query('themestylesheets', array(
+		"attachedto" => $attachedto,
+	), "name='{$name}'");
+	$query = $db->simple_select('themestylesheets', 'sid', "tid='1' AND name='{$name}'");
+	$sid = (int) $db->fetch_field($query, 'sid');
+	if ($sid) {
+		$db->update_query('themestylesheets', $css, "sid='{$sid}'");
+	} else {
+		$sid = $db->insert_query('themestylesheets', $css);
+		$css['sid'] = (int) $sid;
+	}
+	require_once MYBB_ADMIN_DIR . "inc/functions_themes.php";
+	if (!cache_stylesheet(1, $css['cachefile'], $stylesheet)) {
+		$db->update_query("themestylesheets", array('cachefile' => "css.php?stylesheet={$sid}"), "sid='{$sid}'", 1);
+	}
+	update_theme_stylesheet_list(1, false, true);
+
 	// Add database column
 	$db->write_query("ALTER TABLE " . TABLE_PREFIX . "posts ADD pinned tinyint(1) NOT NULL DEFAULT '0'");
 
@@ -88,6 +116,17 @@ function pinpost_is_installed()
 function pinpost_uninstall()
 {
 	global $db;
+
+	foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(MYBB_ROOT . 'cache/themes')) as $file) {
+		if (stripos($file, 'pinpost') !== false) {
+			@unlink($file);
+		}
+	}
+
+	$db->delete_query('themestylesheets', "name='pinpost.css'");
+	require_once MYBB_ADMIN_DIR . "inc/functions_themes.php";
+	update_theme_stylesheet_list(1, false, true);
+
 	$db->write_query("ALTER TABLE " . TABLE_PREFIX . "posts DROP COLUMN pinned");
 
 	foreach (glob(MYBB_ROOT . 'inc/plugins/pinpost/*.htm') as $template) {
@@ -131,6 +170,9 @@ function pinpost_commit()
 	if ($mybb->input['action'] == "pin" || $mybb->input['action'] == "unpin") {
 		$fid = $mybb->get_input('fid', MyBB::INPUT_INT);
 		$tid = $mybb->get_input('tid', MyBB::INPUT_INT);
+		$pid = $mybb->get_input('pid', MyBB::INPUT_INT);
+
+		if (!$fid || !$tid || !$pid) error_no_permission();
 
 		if ($mybb->input['action'] == "pin" && $mybb->settings['pinpost_limit'] <= $db->fetch_field($db->simple_select("posts", "COUNT(pinned) AS pin", "pinned='1' AND tid='" . $tid . "'"), "pin")) {
 			error_no_permission();
@@ -140,7 +182,6 @@ function pinpost_commit()
 
 		if ((in_array($fid, $allowed_forums) || in_array('-1', $allowed_forums)) && pinpost_access()) {
 			$lang->load('pinpost');
-			$pid = $mybb->get_input('pid', MyBB::INPUT_INT);
 			$state = $mybb->input['action'] == 'pin' ? '1' : '0';
 			$db->update_query("posts", ['pinned' => $state], "pid='{$pid}' AND tid='{$tid}'");
 
