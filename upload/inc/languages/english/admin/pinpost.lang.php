@@ -7,3 +7,5 @@ $l['pinpost_groups_title'] = 'Controller Groups';
 $l['pinpost_groups_desc'] = 'Select the groups who are allowed to pin / unpin posts.';
 $l['pinpost_limit_title'] = 'Pinnable Posts';
 $l['pinpost_limit_desc'] = 'Choose how many posts can be pinned for a thread.';
+$l['pinpost_author_title'] = 'Author Powered';
+$l['pinpost_author_desc'] = 'Allow the author of the thread to manage pin / unpin posts.';

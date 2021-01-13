@@ -91,7 +91,7 @@ function pinpost_install()
 	$gid = $db->insert_id();
 	$disporder = 0;
 	$pinpost_settings = array();
-	$pinpost_opts = array(['forums', 'forumselect', '-1'], ['groups', 'groupselect', '3,4,6'], ['limit', 'numeric', '5']);
+	$pinpost_opts = array(['forums', 'forumselect', '-1'], ['groups', 'groupselect', '3,4,6'], ['limit', 'numeric', '5'], ['author', 'yesno', '0']);
 
 	foreach ($pinpost_opts as $pinpost_opt) {
 		$pinpost_opt[0] = 'pinpost_' . $pinpost_opt[0];
@@ -156,9 +156,14 @@ function pinpost_deactivate()
 	}
 };
 
-function pinpost_access()
+function pinpost_access($tid)
 {
-	global $mybb;
+	global $db, $mybb;
+	if ($mybb->settings['pinpost_author']) {
+		if ($mybb->user['uid'] && $mybb->user['uid'] == $db->fetch_field($db->simple_select("threads", "uid", "tid='" . $tid . "'"), "uid")) {
+			return true;
+		}
+	}
 	return !empty(array_intersect(explode(',', $mybb->settings['pinpost_groups']), explode(',', $mybb->user['usergroup'] . ',' . $mybb->user['additionalgroups'])));
 }
 
@@ -172,15 +177,17 @@ function pinpost_commit()
 		$tid = $mybb->get_input('tid', MyBB::INPUT_INT);
 		$pid = $mybb->get_input('pid', MyBB::INPUT_INT);
 
-		if (!$fid || !$tid || !$pid) error_no_permission();
-
-		if ($mybb->input['action'] == "pin" && $mybb->settings['pinpost_limit'] <= $db->fetch_field($db->simple_select("posts", "COUNT(pinned) AS pin", "pinned='1' AND tid='" . $tid . "'"), "pin")) {
+		if (
+			!$fid || !$tid || !$pid
+			|| $pid == $db->fetch_field($db->simple_select("threads", "firstpost", "tid='" . $tid . "'"), "firstpost")
+			|| ($mybb->input['action'] == "pin" && $mybb->settings['pinpost_limit'] <= $db->fetch_field($db->simple_select("posts", "COUNT(pinned) AS pin", "pinned='1' AND tid='" . $tid . "'"), "pin"))
+		) {
 			error_no_permission();
 		}
 
 		$allowed_forums = explode(',', $mybb->settings['pinpost_forums']);
 
-		if ((in_array($fid, $allowed_forums) || in_array('-1', $allowed_forums)) && pinpost_access()) {
+		if ((in_array($fid, $allowed_forums) || in_array('-1', $allowed_forums)) && pinpost_access($tid)) {
 			$lang->load('pinpost');
 			$state = $mybb->input['action'] == 'pin' ? '1' : '0';
 			$db->update_query("posts", ['pinned' => $state], "pid='{$pid}' AND tid='{$tid}'");
@@ -206,7 +213,7 @@ function pinpost_populate(&$post)
 			$thread['pinned'] = $db->fetch_field($db->simple_select("posts", "COUNT(pinned) AS pin", "pinned='1' AND tid='" . $post['tid'] . "'"), "pin");
 		}
 
-		if ($post['pid'] != $post['tid'] && pinpost_access()) {
+		if ($post['pid'] != $thread['firstpost'] && pinpost_access($post['tid'])) {
 			$pinned['pid'] = $post['pid'];
 			if ($post['pinned']) {
 				$un =  'un';
@@ -221,7 +228,7 @@ function pinpost_populate(&$post)
 			}
 		}
 
-		if ($post['pid'] == $post['tid'] && $thread['pinned']) {
+		if ($post['pid'] == $thread['firstpost'] && $thread['pinned']) {
 			$limit = (int)$mybb->settings['pinpost_limit'];
 			$pinpost_bits = "";
 
@@ -232,7 +239,7 @@ function pinpost_populate(&$post)
 				$lang->postbit_pintext = '✖';
 				$pinpost_stamp = my_date('relative', $pinned['dateline']);
 				$pintitle = $lang->sprintf($lang->postbit_pintitle, $lang->pinpost_unpin);
-				if (pinpost_access()) eval("\$pinpost_unpin = \"" . $templates->get("postbit_pinpost_button") . "\";");
+				if (pinpost_access($post['tid'])) eval("\$pinpost_unpin = \"" . $templates->get("postbit_pinpost_button") . "\";");
 				eval("\$pinpost_bits .= \"" . $templates->get("postbit_pinpost_bit") . "\";");
 			}
 
