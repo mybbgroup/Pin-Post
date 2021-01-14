@@ -13,6 +13,7 @@ if (!defined('IN_MYBB')) {
 	die('Direct access prohibited.');
 }
 
+$plugins->add_hook('global_start', 'pinpost_templates');
 $plugins->add_hook('postbit', 'pinpost_populate');
 $plugins->add_hook('showthread_start', 'pinpost_commit');
 
@@ -91,7 +92,7 @@ function pinpost_install()
 	$gid = $db->insert_id();
 	$disporder = 0;
 	$pinpost_settings = array();
-	$pinpost_opts = array(['forums', 'forumselect', '-1'], ['groups', 'groupselect', '3,4,6'], ['limit', 'numeric', '5'], ['author', 'yesno', '0']);
+	$pinpost_opts = array(['forums', 'forumselect', '-1'], ['groups', 'groupselect', '3,4,6'], ['limit', 'numeric', '5'], ['author', 'yesno', '0'], ['force_redirect', 'yesno', '1']);
 
 	foreach ($pinpost_opts as $pinpost_opt) {
 		$pinpost_opt[0] = 'pinpost_' . $pinpost_opt[0];
@@ -156,6 +157,25 @@ function pinpost_deactivate()
 	}
 };
 
+function pinpost_templates()
+{
+	global $templatelist;
+
+	if(defined('THIS_SCRIPT') && THIS_SCRIPT == 'showthread.php')
+	{
+		if(!isset($templatelist))
+		{
+			$templatelist = '';
+		}
+		else
+		{
+			$templatelist .= ',';
+		}
+
+		$templatelist .= 'postbit_pinpost_button, postbit_pinpost_bit, postbit_pinpost';
+	}
+}
+
 function pinpost_access($tid)
 {
 	global $db, $mybb;
@@ -192,7 +212,7 @@ function pinpost_commit()
 			$state = $mybb->input['action'] == 'pin' ? '1' : '0';
 			$db->update_query("posts", ['pinned' => $state], "pid='{$pid}' AND tid='{$tid}'");
 
-			redirect("showthread.php?tid={$tid}#pin{$tid}", $lang->sprintf($lang->pin_success_message, ($mybb->input['action'] == "pin" ? $lang->pinpost_pin : $lang->pinpost_unpin)), '', true);
+			redirect("showthread.php?tid={$tid}#pin{$tid}", $lang->sprintf($lang->pin_success_message, ($mybb->input['action'] == "pin" ? $lang->pinpost_pin : $lang->pinpost_unpin)), '', (bool)$mybb->settings['pinpost_force_redirect']);
 		} else {
 			error_no_permission();
 		}
@@ -205,12 +225,32 @@ function pinpost_populate(&$post)
 	$allowed_forums = explode(',', $mybb->settings['pinpost_forums']);
 
 	if (in_array($post['fid'], $allowed_forums) || in_array('-1', $allowed_forums)) {
-		global $db, $templates, $lang, $thread;
+		global $db, $templates, $lang, $thread, $visible, $pinnedposts;
 		$lang->load('pinpost');
+
+		static $pin_cache = null;
 
 		//Preserve pin count to use for every post build
 		if (!isset($thread['pinned'])) {
-			$thread['pinned'] = $db->fetch_field($db->simple_select("posts", "COUNT(pinned) AS pin", "pinned='1' AND tid='" . $post['tid'] . "'"), "pin");
+
+			if($pin_cache === null)
+			{
+				$pin_cache = [];
+
+				$where = '';
+
+				if($visible)
+				{
+					$where = "AND (1=1 {$visible})";
+				}
+
+				$query = $db->simple_select("posts p", "p.subject, p.pid, p.uid, p.username, p.dateline", "p.tid='" . $post['tid'] . "' AND p.pinned='1' {$where}", array("order_by" => "p.pid"));
+				while ($pinned = $db->fetch_array($query)) {
+					$pin_cache[] = $pinned;
+				}
+			}
+
+			$thread['pinned'] = count($pin_cache);
 		}
 
 		if ($post['pid'] != $thread['firstpost'] && pinpost_access($post['tid'])) {
@@ -232,8 +272,8 @@ function pinpost_populate(&$post)
 			$limit = (int)$mybb->settings['pinpost_limit'];
 			$pinpost_bits = "";
 
-			$query = $db->simple_select("posts", "subject, pid, uid, username, dateline", "tid='" . $post['tid'] . "' AND pinned='1'", array("order_by" => "pid", "limit" => $limit)); // Consider Visible?
-			while ($pinned = $db->fetch_array($query)) {
+			$count = 0;
+			foreach ((array)$pin_cache as $pinned) {
 				$pinpost_poster = build_profile_link($pinned['username'], $pinned['uid']);
 				$un =  'un';
 				$lang->postbit_pintext = '✖';
@@ -241,9 +281,15 @@ function pinpost_populate(&$post)
 				$pintitle = $lang->sprintf($lang->postbit_pintitle, $lang->pinpost_unpin);
 				if (pinpost_access($post['tid'])) eval("\$pinpost_unpin = \"" . $templates->get("postbit_pinpost_button") . "\";");
 				eval("\$pinpost_bits .= \"" . $templates->get("postbit_pinpost_bit") . "\";");
+
+				++$count;
+				if($count >= $limit)
+				{
+					break;
+				}
 			}
 
-			eval("\$post['pinpost'] = \"" . $templates->get("postbit_pinpost") . "\";");
+			eval("\$post['pinpost'] = \$pinnedposts = \"" . $templates->get("postbit_pinpost") . "\";");
 		}
 	}
 };
