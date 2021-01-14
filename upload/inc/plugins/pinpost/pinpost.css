@@ -42,9 +42,9 @@
 }
 
 .postbit_buttons a.postbit_pin span {
-	background-image: url(images/pin.png);
+	background-image: url(images/pin--plus.png);
 }
 
 .postbit_buttons a.postbit_unpin span {
-	background-image: url(images/unpin.png);
+	background-image: url(images/pin--minus.png);
 }

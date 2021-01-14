@@ -26,7 +26,7 @@ function pinpost_info()
 		'name' => 'Pin Post',
 		'description' => $lang->pinpost_desc,
 		'website' => 'https://github.com/mybbgroup/Pin-Post',
-		'author' => 'effone',
+		'author' => 'effone</a> of <a href="https://mybb.group">MyBB Group</a>',
 		'authorsite' => 'https://eff.one',
 		'version' => '1.0.0',
 		'compatibility' => '18*',
