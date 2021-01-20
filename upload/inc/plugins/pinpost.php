@@ -92,11 +92,11 @@ function pinpost_install()
 	$gid = $db->insert_id();
 	$disporder = 0;
 	$pinpost_settings = array();
-	$pinpost_opts = array(['forums', 'forumselect', '-1'], ['groups', 'groupselect', '3,4,6'], ['limit', 'numeric', '5'], ['author', 'yesno', '0'], ['force_redirect', 'yesno', '1']);
+	$pinpost_opts = array(array('forums', 'forumselect', '-1'), array('groups', 'groupselect', '3,4,6'), array('limit', 'numeric', '5'), array('author', 'yesno', '0'), array('force_redirect', 'yesno', '1'));
 
 	foreach ($pinpost_opts as $pinpost_opt) {
 		$pinpost_opt[0] = 'pinpost_' . $pinpost_opt[0];
-		$pinpost_opt = array_combine(['name', 'optionscode', 'value'], $pinpost_opt);
+		$pinpost_opt = array_combine(array('name', 'optionscode', 'value'), $pinpost_opt);
 		$pinpost_opt['title'] = $lang->{$pinpost_opt['name'] . "_title"};
 		$pinpost_opt['description'] = $lang->{$pinpost_opt['name'] . "_desc"};
 		$pinpost_opt['disporder'] = ++$disporder;
@@ -143,7 +143,7 @@ function pinpost_uninstall()
 function pinpost_activate()
 {
 	require MYBB_ROOT . "inc/adminfunctions_templates.php";
-	foreach (['postbit', 'postbit_classic'] as $tpl) {
+	foreach (array('postbit', 'postbit_classic') as $tpl) {
 		find_replace_templatesets($tpl, '#button_purgespammer\']}#', 'button_purgespammer\']}<!-- pinpost -->{\$post[\'button_pinpost\']}<!-- /pinpost -->');
 		find_replace_templatesets($tpl, '~(.*)<\/div>~su', '${1}</div><!-- pinpost -->{\$post[\'pinpost\']}<!-- /pinpost -->');
 	}
@@ -152,7 +152,7 @@ function pinpost_activate()
 function pinpost_deactivate()
 {
 	require MYBB_ROOT . "inc/adminfunctions_templates.php";
-	foreach (['postbit', 'postbit_classic'] as $tpl) {
+	foreach (array('postbit', 'postbit_classic') as $tpl) {
 		find_replace_templatesets($tpl, '#\<!--\spinpost\s--\>(.*?)\<!--\s\/pinpost\s--\>#is', '', 0);
 	}
 };
@@ -184,7 +184,10 @@ function pinpost_access($tid)
 			return true;
 		}
 	}
-	return !empty(array_intersect(explode(',', $mybb->settings['pinpost_groups']), explode(',', $mybb->user['usergroup'] . ',' . $mybb->user['additionalgroups'])));
+	$result = array_intersect(explode(',', $mybb->settings['pinpost_groups']), explode(',', $mybb->user['usergroup'] . ',' . $mybb->user['additionalgroups']));
+     if(!empty($result)) return true;
+     return false;
+
 }
 
 function pinpost_commit()
@@ -210,7 +213,7 @@ function pinpost_commit()
 		if ((in_array($fid, $allowed_forums) || in_array('-1', $allowed_forums)) && pinpost_access($tid)) {
 			$lang->load('pinpost');
 			$state = $mybb->input['action'] == 'pin' ? '1' : '0';
-			$db->update_query("posts", ['pinned' => $state], "pid='{$pid}' AND tid='{$tid}'");
+			$db->update_query("posts", array('pinned' => $state), "pid='{$pid}' AND tid='{$tid}'");
 
 			redirect("showthread.php?tid={$tid}#pin{$tid}", $lang->sprintf($lang->pin_success_message, ($mybb->input['action'] == "pin" ? $lang->pinpost_pin : $lang->pinpost_unpin)), '', (bool)$mybb->settings['pinpost_force_redirect']);
 		} else {
@@ -235,7 +238,7 @@ function pinpost_populate(&$post)
 
 			if($pin_cache === null)
 			{
-				$pin_cache = [];
+				$pin_cache = array();
 
 				$where = '';
 
