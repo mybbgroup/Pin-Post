@@ -237,35 +237,35 @@ function pinpost_populate(&$post)
 			{
 				$pin_cache = [];
 
-                $tid = (int)$post['tid'];
+				$tid = (int)$post['tid'];
 
-                $where = ["tid='{$tid}'", "pinned='1'"];
+				$where = ["tid='{$tid}'", "pinned='1'"];
 
-                $visible_states = [1];
+				$visible_states = [1];
 
-                if(is_moderator($post['fid']))
-                {
-                    if(is_moderator($post['fid'], 'canviewdeleted'))
-                    {
-                        $visible_states[] = -1;
-                    }
+				if(is_moderator($post['fid']))
+				{
+					if(is_moderator($post['fid'], 'canviewdeleted'))
+					{
+						$visible_states[] = -1;
+					}
 
-                    if(is_moderator($post['fid'], 'canviewunapprove'))
-                    {
-                        $visible_states[] = 0;
-                    }
-                }
+					if(is_moderator($post['fid'], 'canviewunapprove'))
+					{
+						$visible_states[] = 0;
+					}
+				}
 
-                $visible_states = implode(',', $visible_states);
+				$visible_states = implode(',', $visible_states);
 
-                $where[] = "visible IN ({$visible_states})";
+				$where[] = "visible IN ({$visible_states})";
 
 				$query = $db->simple_select(
-                    "posts",
-                    "subject, pid, uid, username, dateline",
-                    implode(' AND ', $where),
-                    array("order_by" => "pid")
-                );
+					"posts",
+					"subject, pid, uid, username, dateline",
+					implode(' AND ', $where),
+					array("order_by" => "pid")
+				);
 
 				while ($pinned = $db->fetch_array($query)) {
 					$pin_cache[] = $pinned;
