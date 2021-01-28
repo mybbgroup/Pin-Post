@@ -225,7 +225,7 @@ function pinpost_populate(&$post)
 	$allowed_forums = explode(',', $mybb->settings['pinpost_forums']);
 
 	if (in_array($post['fid'], $allowed_forums) || in_array('-1', $allowed_forums)) {
-		global $db, $templates, $lang, $thread, $pinnedposts;
+		global $db, $templates, $lang, $thread, $ismod, $pinnedposts;
 		$lang->load('pinpost');
 
 		static $pin_cache = null;
@@ -243,7 +243,12 @@ function pinpost_populate(&$post)
 
 				$visible_states = [1];
 
-				if(is_moderator($post['fid']))
+                if(!isset($ismod))
+                {
+                    $ismod = is_moderator($post['fid']);
+                }
+
+				if($ismod)
 				{
 					if(is_moderator($post['fid'], 'canviewdeleted'))
 					{
