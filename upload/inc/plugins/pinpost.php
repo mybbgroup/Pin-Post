@@ -243,10 +243,10 @@ function pinpost_populate(&$post)
 
 				$visible_states = [1];
 
-                if(!isset($ismod))
-                {
-                    $ismod = is_moderator($post['fid']);
-                }
+				if(!isset($ismod))
+				{
+					$ismod = is_moderator($post['fid']);
+				}
 
 				if($ismod)
 				{
