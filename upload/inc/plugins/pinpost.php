@@ -28,7 +28,7 @@ function pinpost_info()
 		'website' => 'https://github.com/mybbgroup/Pin-Post',
 		'author' => 'effone</a> of <a href="https://mybb.group">MyBB Group</a>',
 		'authorsite' => 'https://eff.one',
-		'version' => '1.0.0',
+		'version' => '1.0.1',
 		'compatibility' => '18*',
 		'codename' => 'pinpost',
 	);
