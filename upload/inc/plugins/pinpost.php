@@ -225,7 +225,7 @@ function pinpost_populate(&$post)
 	$allowed_forums = explode(',', $mybb->settings['pinpost_forums']);
 
 	if (in_array($post['fid'], $allowed_forums) || in_array('-1', $allowed_forums)) {
-		global $db, $templates, $lang, $thread, $visible, $pinnedposts;
+		global $db, $templates, $lang, $thread, $ismod, $pinnedposts;
 		$lang->load('pinpost');
 
 		static $pin_cache = null;
@@ -237,14 +237,41 @@ function pinpost_populate(&$post)
 			{
 				$pin_cache = [];
 
-				$where = '';
+				$tid = (int)$post['tid'];
 
-				if($visible)
+				$where = ["tid='{$tid}'", "pinned='1'"];
+
+				$visible_states = [1];
+
+				if(!isset($ismod))
 				{
-					$where = "AND (1=1 {$visible})";
+					$ismod = is_moderator($post['fid']);
 				}
 
-				$query = $db->simple_select("posts p", "p.subject, p.pid, p.uid, p.username, p.dateline", "p.tid='" . $post['tid'] . "' AND p.pinned='1' {$where}", array("order_by" => "p.pid"));
+				if($ismod)
+				{
+					if(is_moderator($post['fid'], 'canviewdeleted'))
+					{
+						$visible_states[] = -1;
+					}
+
+					if(is_moderator($post['fid'], 'canviewunapprove'))
+					{
+						$visible_states[] = 0;
+					}
+				}
+
+				$visible_states = implode(',', $visible_states);
+
+				$where[] = "visible IN ({$visible_states})";
+
+				$query = $db->simple_select(
+					"posts",
+					"subject, pid, uid, username, dateline",
+					implode(' AND ', $where),
+					array("order_by" => "pid")
+				);
+
 				while ($pinned = $db->fetch_array($query)) {
 					$pin_cache[] = $pinned;
 				}
