@@ -184,10 +184,8 @@ function pinpost_access($tid)
 			return true;
 		}
 	}
-	$result = array_intersect(explode(',', $mybb->settings['pinpost_groups']), explode(',', $mybb->user['usergroup'] . ',' . $mybb->user['additionalgroups']));
-     if(!empty($result)) return true;
-     return false;
 
+	return $mybb->settings['pinpost_groups'] == -1 || is_member($mybb->settings['pinpost_groups']);
 }
 
 function pinpost_commit()
